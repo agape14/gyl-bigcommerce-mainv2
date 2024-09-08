@@ -6,6 +6,37 @@
         "version": "1.0.0"
     },
     "paths": {
+        "/api/createProducts": {
+            "get": {
+                "tags": [
+                    "Bigcommerce"
+                ],
+                "summary": "createProducts",
+                "description": "create Product In Crm of Workdrive",
+                "operationId": "d7e6bb8f35417cdc49eafbd66ca42238",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "API test route works!"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
         "/api/uploadFileCsv": {
             "get": {
                 "tags": [

@@ -17,11 +17,29 @@ use Maatwebsite\Excel\Facades\Excel;
 class BigcommerceController extends Controller
 {
 
+/**
+     * @OA\Get(
+     *     path="/api/createProducts",
+     *     summary="createProducts",
+     *     description="create Product In Crm of Workdrive",
+     *     tags={"Bigcommerce"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful response",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="API test route works!")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Not Found"
+     *     )
+     * )
+     */
 
-        
     public function createProductInCrm(Request $request)
     {
-        $serviceCRM = new ZohoCRMService();       
+        $serviceCRM = new ZohoCRMService();
         $record = $serviceCRM->uploadFileCrm();
     }
 

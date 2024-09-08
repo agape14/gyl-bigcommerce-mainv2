@@ -150,7 +150,7 @@ class ZohoCRMService
     }
 
 
-    
+
     /**
      * @return array
      */
@@ -173,12 +173,32 @@ class ZohoCRMService
      */
     public function uploadFileCrm()
     {
+        // Ruta del archivo CSV original - Inicio para convertir el csv a zip
+        $csvFileName = 'tiny2.csv';
+        $csvRelativeFilePath = 'public/touploadcrm/' . $csvFileName;
+        $csvAbsoluteFilePath = storage_path('app/' . $csvRelativeFilePath);
+
+        // Ruta para el archivo ZIP a generar
+        $zipFileName = 'tiny2.zip';
+        $zipRelativeFilePath = 'public/touploadcrm/' . $zipFileName;
+        $zipAbsoluteFilePath = storage_path('app/' . $zipRelativeFilePath);
+
+        // Crear el archivo ZIP
+        $zip = new \ZipArchive();
+        if ($zip->open($zipAbsoluteFilePath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+            // Añadir el archivo CSV al archivo ZIP
+            $zip->addFile($csvAbsoluteFilePath, $csvFileName); // El segundo parámetro es el nombre dentro del ZIP
+            $zip->close();
+        } else {
+            throw new \Exception("No se pudo crear el archivo ZIP.");
+        }
+        //Fin para convertir el csv a zip
 
         $url = 'https://content.zohoapis.com/crm/v6/upload';
         $header_crm = $this->headersUpload();
         $fileName = 'tiny2.zip';
         $relativeFilePath = 'public/touploadcrm/' . $fileName; // Ruta relativa dentro de storage/app/public/
-        $absoluteFilePath = storage_path('app/' . $relativeFilePath); // Ruta absoluta para acceder al archivo      
+        $absoluteFilePath = storage_path('app/' . $relativeFilePath); // Ruta absoluta para acceder al archivo
         //$fields["file"] = fopen($absoluteFilePath, 'rb');
             try {
                 $response =  $this->client->request('POST', $url, [
@@ -191,7 +211,7 @@ class ZohoCRMService
                         ],
                     ],
                 ]);
-    
+
                     $responseBody = $response->getBody()->getContents();
                     $responseData = json_decode($responseBody, true);
                     if (isset($responseData['code']) && $responseData['code'] === 'FILE_UPLOAD_SUCCESS') {
@@ -200,13 +220,13 @@ class ZohoCRMService
                     } else {
                         echo "File upload failed.";
                     }
-            } catch (\Exception $e) {      
+            } catch (\Exception $e) {
 
                 return response()->json(['error' => $e->getMessage()], 500);
             }
-                
+
             try {
-                
+
                 $zohoApiUrl = 'https://www.zohoapis.com/crm/bulk/v6/write';
                 $jobData = [
                     "operation" => "upsert",
@@ -221,7 +241,7 @@ class ZohoCRMService
                             "module" => [
                                 "api_name" => "Products"
                             ],
-                            "find_by" => "ITEM_No",                           
+                            "find_by" => "ITEM_No",
                             "file_id" => $fileId,
                             "field_mappings" => [
                                 [
@@ -249,6 +269,14 @@ class ZohoCRMService
                                     "index" => 6
                                 ],
                                 [
+                                    "api_name" => "COG",
+                                    "index" => 24
+                                ],
+                                [
+                                    "api_name" => "Unit_Price",
+                                    "index" => 25
+                                ],
+                                [
                                     "api_name" => "bigcommerce_json",
                                     "index" => 26
                                 ]
@@ -256,25 +284,25 @@ class ZohoCRMService
                         ]
                     ]
                 ];
-                $header = $this->headers();       
+                $header = $this->headers();
                 $accessToken = $this->zohoOAuthService->getAccessToken()->access_token;
                 $response = $this->client->request('POST', $zohoApiUrl, [
                     'headers' => $header,
                     'json' => $jobData
                 ]);
-               
+
             $responseBodyInsert = $response->getBody()->getContents();
             $responseData = json_decode($responseBodyInsert, true);
             dd($responseData);
         } catch (\Exception $e) {
-            // Handle exception            
+            // Handle exception
             return response()->json(['error' => $e->getMessage()], 500);
         }
-          
-            
-       
 
-        
+
+
+
+
     }
 
 
