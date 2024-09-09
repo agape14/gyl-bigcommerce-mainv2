@@ -135,7 +135,7 @@
                 "tags": [
                     "Bigcommerce"
                 ],
-                "summary": "Test API",
+                "summary": "Process Excel file and convert to CSV format",
                 "description": "Process Excel file and convert to CSV format",
                 "operationId": "cbf5aa0a947be233d64c22d5de935515",
                 "responses": {
@@ -161,7 +161,7 @@
                 }
             }
         },
-        "/api/process-bigcommerce": {
+        "/api/processbigcommerce": {
             "get": {
                 "tags": [
                     "Bigcommerce"
@@ -182,7 +182,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Archivo procesado y subido correctamente."
+                                            "example": "El proceso ha sido iniciado y se está ejecutando en segundo plano."
                                         }
                                     },
                                     "type": "object"
@@ -190,8 +190,25 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Solicitud incorrecta"
+                    "500": {
+                        "description": "Error en el servidor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ocurrió un error al intentar iniciar el proceso."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }

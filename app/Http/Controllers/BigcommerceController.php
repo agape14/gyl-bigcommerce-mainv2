@@ -39,8 +39,27 @@ class BigcommerceController extends Controller
 
     public function createProductInCrm(Request $request)
     {
-        $serviceCRM = new ZohoCRMService();
-        $record = $serviceCRM->uploadFileCrm();
+        //$serviceCRM = new ZohoCRMService();
+        //$record = $serviceCRM->uploadFileCrm();
+        try {
+            $serviceCRM = new ZohoCRMService();
+            $record = $serviceCRM->uploadFileCrm();
+
+            // Si se llega hasta aquí sin errores, devuelve un éxito
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El archivo se subió y el trabajo de escritura de productos se inició correctamente.',
+                'data' => $record // Puedes devolver los datos relevantes aquí si es necesario
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Captura cualquier excepción y devuelve el error con detalles
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ocurrió un error: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString() // Esto es opcional, puedes eliminarlo si no quieres mostrar el trace
+            ], 500);
+        }
     }
 
 /**
@@ -109,9 +128,8 @@ class BigcommerceController extends Controller
      */
     public function downloadFileExcel()
     {
-        $file_name = 'BIGCOMMERCE.xlsx'; //archivo a descargar
-        //$file_name = 'testbajada.xlsx'; //nombre archivo xls
-        $file_path_to_save = storage_path('app/public/input_file/');
+        $file_name = env('FILE_NAME_XLSX'); //archivo a descargar
+        $file_path_to_save = storage_path(env('INPUT_FILE_PATH'));
         $serviceWorkdrive = new ZohoWorkdriveService();
         $respuesta = $serviceWorkdrive->downloadFile($file_name, env('ZOHO_WORKDRIVE_FOLDER_INPUT_XLS'), $file_path_to_save);
 
@@ -178,7 +196,7 @@ class BigcommerceController extends Controller
     /**
      * @OA\Get(
      *     path="/api/process-excel",
-     *     summary="Test API",
+     *     summary="Process Excel file and convert to CSV format",
      *     description="Process Excel file and convert to CSV format",
      *     tags={"Bigcommerce"},
      *     @OA\Response(
@@ -199,9 +217,8 @@ class BigcommerceController extends Controller
      {
         try {
             // Rutas y nombres de archivos
-            $inputFilePath = storage_path('app/public/input_file/BIGCOMMERCE.xlsx');
-            $outputFileName = 'BIGCOMME_11.csv';
-            $outputFilePath = storage_path('app/public/output_file/' . $outputFileName);
+            $inputFilePath = storage_path(env('INPUT_FILE_PATH').env('FILE_NAME_XLSX'));
+            $outputFilePath = storage_path(env('OUTPUT_FILE_PATH') . env('OUTPUT_CSV_NAME'));
 
             // Capturar tiempo de inicio
             $startTime = now();
@@ -256,13 +273,14 @@ class BigcommerceController extends Controller
         \Log::info($buffer->fetch());
      }
 
-     /**
+    /**
      * @OA\Get(
-     *     path="/api/process-bigcommerce",
+     *     path="/api/processbigcommerce",
      *     summary="Process Bigcommerce",
      *     description="Inicia el proceso de Bigcommerce y retorna un mensaje de éxito.",
      *     operationId="processBigcommerce",
      *     tags={"Bigcommerce"},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Operación exitosa",
@@ -276,116 +294,53 @@ class BigcommerceController extends Controller
      *             @OA\Property(
      *                 property="message",
      *                 type="string",
-     *                 example="Archivo procesado y subido correctamente."
+     *                 example="El proceso ha sido iniciado y se está ejecutando en segundo plano."
      *             )
      *         )
      *     ),
      *     @OA\Response(
-     *         response=400,
-     *         description="Solicitud incorrecta"
-     *     ),
+     *         response=500,
+     *         description="Error en el servidor",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(
+     *                 property="status",
+     *                 type="string",
+     *                 example="error"
+     *             ),
+     *             @OA\Property(
+     *                 property="message",
+     *                 type="string",
+     *                 example="Ocurrió un error al intentar iniciar el proceso."
+     *             )
+     *         )
+     *     )
      * )
      */
-    // public function processBigcommerce(){
-    //     $file_name = 'BIGCOMMERCE.xlsx';
-    //     $file_path_to_save = storage_path('app/public/input_file/');
-    //     $outputFileName = 'BIGCOMME_11.csv';
-    //     $outputFilePath = storage_path('app/public/output_file/' . $outputFileName);
 
-    //     try {
-    //         // Paso 1: Descargar el archivo Excel desde Zoho WorkDrive
-    //         $serviceWorkdrive = new ZohoWorkdriveService();
-    //         $download_response = $serviceWorkdrive->downloadFilev2($file_name, env('ZOHO_WORKDRIVE_FOLDER_INPUT_XLS'), $file_path_to_save);
-
-    //         // Validación de descarga exitosa
-    //         if (!$download_response['status']) {
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => $download_response['message'],
-    //                 'error' => $download_response['error'] ?? null,
-    //             ], 500);
-    //         }
-
-    //         // Paso 2: Procesar el archivo Excel a CSV
-    //         $inputFilePath = $file_path_to_save . $file_name;
-    //         $startTime = now();
-
-    //         $this->processExcelFile($inputFilePath, $outputFilePath, $startTime);
-
-    //         $endTime = now();
-    //         $duration = $startTime->diffInMinutes($endTime);
-
-    //         // Validación de procesamiento exitoso
-    //         if (!file_exists($outputFilePath)) {
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Error al procesar el archivo Excel a CSV.'
-    //             ], 500);
-    //         }
-
-    //         // Paso 3: Subir el archivo CSV a Zoho WorkDrive
-    //         $upload_file = $serviceWorkdrive->uploadFile($outputFileName, env('ZOHO_WORKDRIVE_FOLDER_OUTPUT_CSV'), $outputFilePath);
-
-    //         // Validación de subida exitosa
-    //         if ($upload_file['status'] !== 'SUCCESS') {
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Error al subir el archivo CSV a Zoho WorkDrive.'
-    //             ], 500);
-    //         }
-
-    //         // Generar link compartido para el archivo subido
-    //         $resource_id = $upload_file['data'][0]['attributes']['resource_id'];
-    //         $share_file = $serviceWorkdrive->createExternaLinks($resource_id, $outputFileName);
-
-    //         $link = null;
-    //         if (!empty($share_file->data)) {
-    //             $attributes = $share_file->data->attributes ?? null;
-    //             if (!empty($attributes->link)) {
-    //                 $link = $attributes->link;
-    //             }
-    //         }
-
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => 'Archivo procesado y subido correctamente.',
-    //             'start_time' => $startTime->toDateTimeString(),
-    //             'end_time' => $endTime->toDateTimeString(),
-    //             'duration_minutes' => $duration,
-    //             'share_link' => $link ?? 'No se pudo generar el enlace compartido.'
-    //         ], 200);
-
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Ocurrió un error durante el proceso: ' . $e->getMessage(),
-    //             'trace' => $e->getTraceAsString()
-    //         ], 500);
-    //     }
-    // }
 
     public function processBigcommerce()
-{
-    $file_name = 'BIGCOMMERCE.xlsx';
-    $file_path_to_save = storage_path('app/public/input_file/');
-    $outputFileName = 'BIGCOMME_11.csv';
-    $outputFilePath = storage_path('app/public/output_file/' . $outputFileName);
+    {
+        $file_name = env('FILE_NAME_XLSX');
+        $file_path_to_save = storage_path(env('INPUT_FILE_PATH'));
+        $outputFileName = env('OUTPUT_CSV_NAME');
+        $outputFilePath = storage_path(env('OUTPUT_FILE_PATH') . $outputFileName);
 
-    try {
-        ProcessBigcommerceJob::dispatch($file_name, $file_path_to_save, $outputFileName, $outputFilePath);
+        try {
+            ProcessBigcommerceJob::dispatch($file_name, $file_path_to_save, $outputFileName, $outputFilePath);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'El proceso ha sido iniciado y se está ejecutando en segundo plano.',
-        ], 200);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El proceso ha sido iniciado y se está ejecutando en segundo plano.',
+            ], 200);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Ocurrió un error al intentar iniciar el proceso: ' . $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ocurrió un error al intentar iniciar el proceso: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
     }
-}
 
 }

@@ -172,138 +172,102 @@ class ZohoCRMService
      * @return array
      */
     public function uploadFileCrm()
-    {
-        // Ruta del archivo CSV original - Inicio para convertir el csv a zip
-        $csvFileName = 'tiny2.csv';
-        $csvRelativeFilePath = 'public/touploadcrm/' . $csvFileName;
-        $csvAbsoluteFilePath = storage_path('app/' . $csvRelativeFilePath);
+{
+    try {
+        // Convertir el archivo CSV a ZIP
+        $csvFileName = env('OUTPUT_CSV_NAME');
+        $csvRelativeFilePath = env('OUTPUT_FILE_PATH') . $csvFileName;
+        $csvAbsoluteFilePath = storage_path($csvRelativeFilePath);
 
-        // Ruta para el archivo ZIP a generar
-        $zipFileName = 'tiny2.zip';
-        $zipRelativeFilePath = 'public/touploadcrm/' . $zipFileName;
-        $zipAbsoluteFilePath = storage_path('app/' . $zipRelativeFilePath);
+        $zipFileName = env('TOOUTPUTCRM_ZIP_NAME');
+        $zipRelativeFilePath = env('OUTPUT_FILE_PATH') . $zipFileName;
+        $zipAbsoluteFilePath = storage_path($zipRelativeFilePath);
 
-        // Crear el archivo ZIP
         $zip = new \ZipArchive();
         if ($zip->open($zipAbsoluteFilePath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
-            // Añadir el archivo CSV al archivo ZIP
-            $zip->addFile($csvAbsoluteFilePath, $csvFileName); // El segundo parámetro es el nombre dentro del ZIP
+            $zip->addFile($csvAbsoluteFilePath, $csvFileName);
             $zip->close();
         } else {
             throw new \Exception("No se pudo crear el archivo ZIP.");
         }
-        //Fin para convertir el csv a zip
 
+        // Subir archivo ZIP a Zoho CRM
         $url = 'https://content.zohoapis.com/crm/v6/upload';
         $header_crm = $this->headersUpload();
         $fileName = 'tiny2.zip';
-        $relativeFilePath = 'public/touploadcrm/' . $fileName; // Ruta relativa dentro de storage/app/public/
-        $absoluteFilePath = storage_path('app/' . $relativeFilePath); // Ruta absoluta para acceder al archivo
-        //$fields["file"] = fopen($absoluteFilePath, 'rb');
-            try {
-                $response =  $this->client->request('POST', $url, [
-                    'headers' => $header_crm,
-                    'multipart' => [
-                        [
-                            'name'     => 'file',
-                            'contents' => fopen($absoluteFilePath, 'r'),
-                            'filename' => $fileName,
+        $relativeFilePath = 'public/touploadcrm/' . $fileName;
+        $absoluteFilePath = storage_path('app/' . $relativeFilePath);
+
+        $response = $this->client->request('POST', $url, [
+            'headers' => $header_crm,
+            'multipart' => [
+                [
+                    'name'     => 'file',
+                    'contents' => fopen($absoluteFilePath, 'r'),
+                    'filename' => $fileName,
+                ],
+            ],
+        ]);
+
+        $responseBody = $response->getBody()->getContents();
+        $responseData = json_decode($responseBody, true);
+
+        if (isset($responseData['code']) && $responseData['code'] === 'FILE_UPLOAD_SUCCESS') {
+            $fileId = $responseData['details']['file_id'];
+
+            // Iniciar el proceso de escritura en Zoho CRM con el archivo subido
+            $zohoApiUrl = 'https://www.zohoapis.com/crm/bulk/v6/write';
+            $jobData = [
+                "operation" => "upsert",
+                "ignore_empty" => true,
+                "callBack" => [
+                    "url" => "https://sandbox.zohoapis.com/crm/v2/functions/sa_bulk_write_callback/actions/execute?auth_type=apikey&zapikey=1003.cf4f41dc4abb4a1dc38d1486144923c5.ea4bbb3ba57cbc2357d018bf4f3dea28",
+                    "method" => "post"
+                ],
+                "resource" => [
+                    [
+                        "type" => "data",
+                        "module" => [
+                            "api_name" => "Products"
                         ],
-                    ],
-                ]);
-
-                    $responseBody = $response->getBody()->getContents();
-                    $responseData = json_decode($responseBody, true);
-                    if (isset($responseData['code']) && $responseData['code'] === 'FILE_UPLOAD_SUCCESS') {
-                        $fileId = $responseData['details']['file_id'];
-                        echo "File ID: " . $fileId;
-                    } else {
-                        echo "File upload failed.";
-                    }
-            } catch (\Exception $e) {
-
-                return response()->json(['error' => $e->getMessage()], 500);
-            }
-
-            try {
-
-                $zohoApiUrl = 'https://www.zohoapis.com/crm/bulk/v6/write';
-                $jobData = [
-                    "operation" => "upsert",
-                    "ignore_empty" => true,
-                    "callBack" => [
-                        "url" => "https://sandbox.zohoapis.com/crm/v2/functions/sa_bulk_write_callback/actions/execute?auth_type=apikey&zapikey=1003.cf4f41dc4abb4a1dc38d1486144923c5.ea4bbb3ba57cbc2357d018bf4f3dea28",
-                        "method" => "post"
-                    ],
-                    "resource" => [
-                        [
-                            "type" => "data",
-                            "module" => [
-                                "api_name" => "Products"
-                            ],
-                            "find_by" => "ITEM_No",
-                            "file_id" => $fileId,
-                            "field_mappings" => [
-                                [
-                                    "api_name" => "ITEM_No",
-                                    "index" => 0
-                                ],
-                                [
-                                    "api_name" => "MFR_No",
-                                    "index" => 1
-                                ],
-                                [
-                                    "api_name" => "Unit_Of_Measure",
-                                    "index" => 2
-                                ],
-                                [
-                                    "api_name" => "Product_Name",
-                                    "index" => 3
-                                ],
-                                [
-                                    "api_name" => "Product_Description",
-                                    "index" => 5
-                                ],
-                                [
-                                    "api_name" => "Manufacturer_Name",
-                                    "index" => 6
-                                ],
-                                [
-                                    "api_name" => "COG",
-                                    "index" => 24
-                                ],
-                                [
-                                    "api_name" => "Unit_Price",
-                                    "index" => 25
-                                ],
-                                [
-                                    "api_name" => "bigcommerce_json",
-                                    "index" => 26
-                                ]
-                            ]
+                        "find_by" => "ITEM_No",
+                        "file_id" => $fileId,
+                        "field_mappings" => [
+                            ["api_name" => "ITEM_No", "index" => 0],
+                            ["api_name" => "MFR_No", "index" => 1],
+                            ["api_name" => "Unit_Of_Measure", "index" => 2],
+                            ["api_name" => "Product_Name", "index" => 3],
+                            ["api_name" => "Product_Description", "index" => 5],
+                            ["api_name" => "Manufacturer_Name", "index" => 6],
+                            ["api_name" => "COG", "index" => 24],
+                            ["api_name" => "Unit_Price", "index" => 25],
+                            ["api_name" => "bigcommerce_json", "index" => 26]
                         ]
                     ]
-                ];
-                $header = $this->headers();
-                $accessToken = $this->zohoOAuthService->getAccessToken()->access_token;
-                $response = $this->client->request('POST', $zohoApiUrl, [
-                    'headers' => $header,
-                    'json' => $jobData
-                ]);
+                ]
+            ];
+
+            $header = $this->headers();
+            $response = $this->client->request('POST', $zohoApiUrl, [
+                'headers' => $header,
+                'json' => $jobData
+            ]);
 
             $responseBodyInsert = $response->getBody()->getContents();
-            $responseData = json_decode($responseBodyInsert, true);
-            dd($responseData);
-        } catch (\Exception $e) {
-            // Handle exception
-            return response()->json(['error' => $e->getMessage()], 500);
+            $responseDataInsert = json_decode($responseBodyInsert, true);
+
+            return $responseDataInsert;
+
+        } else {
+            throw new \Exception("Error al subir el archivo a Zoho CRM.");
         }
 
-
-
-
-
+    } catch (\Exception $e) {
+        // Manejar la excepción lanzándola al controlador
+        throw new \Exception($e->getMessage());
     }
+}
+
 
 
 

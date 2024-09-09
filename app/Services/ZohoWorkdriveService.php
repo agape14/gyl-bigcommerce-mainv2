@@ -77,6 +77,7 @@ class ZohoWorkdriveService
                     'Authorization: Zoho-oauthtoken ' . $token,
                     'Content-type: multipart/form-data',
                     'x-filename: ' . $file_name,
+                    'x-lsdocnameexists: true',
                     'x-parent_id: ' . $folder_code,
                     'upload-id: ' . $file_path,
                     'x-streammode: 1'
